@@ -44,8 +44,10 @@ Tools available:
 | `suggest_tests(diff, repo_url)` | Generate runnable benchmark/accuracy test scripts |
 | `prepare_pr(diff, repo_url)` | Write a PR description grounded in measured results |
 | `review_pr(pr_url)` | Review open reviewer comments and suggest replies |
+| `upload_seed(patches, readme=…)` | Upload local patch files so `plan_pr_series` can use them as a seed |
 | `plan_pr_series(seed_url, upstream_repo_url=…, staging_repo_url=…, notes=…)` | Split a GitHub PR, seed folder, or local path into a focused PR series; `upstream_repo_url` sets which repo's rules to use; `staging_repo_url` sets where the PR is opened (defaults to upstream) |
 | `get_plan(plan_id)` | Fetch a completed plan and push instructions |
+| `stop_pipeline(run_id, stop_token)` | Cancel a running `plan_pr_series` pipeline |
 
 See [MCP.md](MCP.md) for full parameter reference and usage examples.
 
