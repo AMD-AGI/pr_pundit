@@ -1,0 +1,50 @@
+[project]
+name = "pr-scraper"
+version = "0.1.0"
+description = "Scrape merged PRs and distill reviewer feedback into verifiable merge rules"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx>=0.27",
+    "ddgs>=0.5",
+    "python-dotenv>=1.0",
+    "openai>=1.0",
+    "pyyaml>=6.0",
+    "dspy-ai>=2.5",
+    "black>=24.0",
+    "ruff>=0.4.0",
+]
+
+[project.optional-dependencies]
+scraper = ["scipy>=1.11"]
+ui = ["streamlit>=1.30"]
+mcp = ["mcp[cli]>=1.0"]
+
+[tool.uv]
+package = true
+
+[tool.setuptools.packages.find]
+include = ["schemas*", "scraper*", "pipeline*", "ui*"]
+exclude = ["data*"]
+
+[project.scripts]
+scrape-bronze = "scraper.scrape_bronze:main"
+normalize     = "pipeline.normalize:main"
+distill       = "pipeline.distill:main"
+verify-patch  = "pipeline.verify:main"
+review-rules  = "pipeline.review:main"
+judge-patch   = "pipeline.judge:main"
+fix-patch        = "pipeline.fix:main"
+scrape-recipes   = "scraper.scrape_recipes:main"
+normalize-recipes = "pipeline.normalize_recipes:main"
+distill-recipes  = "pipeline.distill_recipes:main"
+suggest-tests    = "pipeline.suggest_tests:main"
+eval-recipes     = "pipeline.eval_recipes:main"
+mcp-server    = "mcp_server:main"
+run-pipeline  = "pipeline.orchestrate:main"
+init-repo     = "pipeline.init_repo:main"
+prepare-pr    = "pipeline.pr_prepare:main"
+create-pr-from-seed = "pipeline.create_pr_from_seed:main"
+run-benchmarks       = "pipeline.run_benchmarks:main"
+pr-pundit-apply      = "pipeline.apply_plan:main"
+pr-pundit-lineage    = "pipeline.pr_lineage:main"
+distill-design-rules = "pipeline.distill_design_rules:main"

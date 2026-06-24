@@ -1,0 +1,93 @@
+# Pipeline orchestration config.
+# Run: python -m pipeline.orchestrate
+# Resume after failure: re-run same command (state is saved in pipeline_state.json)
+# Fresh start: python -m pipeline.orchestrate --restart
+
+# Supplemental repos — scraped as their own KBs, merged at suggest_tests query time.
+# Each entry is scraped, normalized, and distilled independently (once).
+supplemental_repos:
+  - ROCm/aiter              # AMD inference toolkit — ROCm kernel micro-benchmarks (shared, runtime supplemental for all targets)
+  # ROCm/composable_kernel omitted — thousands of auto-generated instantiation .cpp files
+  # exhaust the GitHub rate limit before reaching actual benchmarks
+
+# Rules repos — crawl merged PR review threads and distill reviewer rules (rules.json).
+# These are the repos contributors will open PRs against, so we need their reviewer standards.
+# include_closed: true — also scrape rejected PRs so pr_lineage can build failure chains
+#   for architecture principles distillation.
+rules_repos:
+  - repo: vllm-project/vllm        # already crawled manually — detect will mark as done
+    include_closed: true
+  - repo: sgl-project/sglang
+    include_closed: true
+  - repo: ROCm/aiter
+    include_closed: true
+# Target repos — the repos for which conformity + test-suggestion KBs are built.
+# Knowledge base sources per target (configured in data/gold/{slug}/repo_config.yaml):
+#   vllm-project/vllm  → vllm itself + vllm-project/recipes (baked in) + ROCm/aiter (supplemental)
+#   sgl-project/sglang → sglang itself + ROCm/aiter + sgl-project/sgl-cookbook (supplemental, once scraped)
+target_repos:
+  vllm-project/vllm:
+    recipes_repo: vllm-project/recipes   # companion recipe repo, scraped in full
+
+  sgl-project/sglang:
+    recipes_repo: sgl-project/sgl-cookbook   # companion cookbook, baked into sglang KB at distillation time
+
+# LLM / distillation settings (shared across all repos)
+distill:
+  model: claude-sonnet-4-6
+  workers: 20
+  embed_model: instructor-xl
+
+# Architectural-layer policies — controls scope discipline in the PR generator.
+# When a seed contains files from multiple layers, the pipeline uses these policies
+# to classify files, check whether model-layer changes can be replaced by compiler
+# passes, and audit generated diffs for layer-policy violations.
+layer_policies:
+  vllm-project/vllm:
+    layers:
+      - name: compiler_pass
+        path_prefixes: ["vllm/compilation/passes/", "vllm/compilation/"]
+        preferred_for: [kernel-fusion, perf, allreduce, rmsnorm]
+        warn_if_present: false
+        compiler_pass_infra:
+          - "vllm/compilation/passes/fusion/allreduce_rms_fusion.py"
+          - "vllm/compilation/passes/fusion/rms_quant_fusion.py"
+          - "vllm/compilation/passes/pass_manager.py"
+          - "vllm/compilation/passes/fusion/"
+      - name: model
+        path_prefixes: ["vllm/model_executor/models/", "vllm/model_executor/layers/"]
+        preferred_for: []
+        warn_if_present: true
+        compiler_pass_infra: []
+      - name: distributed
+        path_prefixes: ["vllm/distributed/"]
+        preferred_for: [allreduce, tensor-parallel]
+        warn_if_present: false
+        compiler_pass_infra: []
+      - name: runtime
+        path_prefixes: ["vllm/_aiter_ops.py", "vllm/config/"]
+        preferred_for: [kernel-fusion, perf]
+        warn_if_present: false
+        compiler_pass_infra: []
+      - name: test
+        path_prefixes: ["tests/", ".buildkite/"]
+        preferred_for: []
+        warn_if_present: false
+        compiler_pass_infra: []
+  sgl-project/sglang:
+    layers:
+      - name: compiler_pass
+        path_prefixes: ["python/sglang/srt/compilation/"]
+        preferred_for: [kernel-fusion, perf]
+        warn_if_present: false
+        compiler_pass_infra: ["python/sglang/srt/compilation/"]
+      - name: model
+        path_prefixes: ["python/sglang/srt/models/", "python/sglang/srt/layers/"]
+        preferred_for: []
+        warn_if_present: true
+        compiler_pass_infra: []
+      - name: test
+        path_prefixes: ["test/", "tests/"]
+        preferred_for: []
+        warn_if_present: false
+        compiler_pass_infra: []

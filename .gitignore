@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+*.pyo
+.env
+.venv/
+*.egg-info/
+data/
+logs/
+results/
+seeds/
+pipeline_state.json
+streamlit.logs
